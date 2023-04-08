@@ -3,5 +3,3 @@ mlxtend
 numpy
 pandas
 seaborn
-keras
-tensorflow
