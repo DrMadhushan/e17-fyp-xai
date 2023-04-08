@@ -3,15 +3,6 @@
 
 # <a href="https://colab.research.google.com/github/DrMadhushan/e17-fyp-xai/blob/master/Feature_Engineering.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
 
-# In[ ]:
-
-
-get_ipython().system('pip install mlxtend')
-
-
-# In[ ]:
-
-
 import joblib
 import sys
 
@@ -24,15 +15,15 @@ sys.modules['sklearn.externals.joblib'] = joblib
 import os
 import h5py
 import json
-import keras
+# import keras
 import random 
 import imageio
 import datetime
 import numpy as np
 import pandas as pd
 import seaborn as sns
-import tensorflow as tf
-from keras import backend as K
+# import tensorflow as tf
+# from keras import backend as K
 from datetime import timedelta
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import MultiLabelBinarizer
