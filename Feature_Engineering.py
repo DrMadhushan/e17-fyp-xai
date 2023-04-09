@@ -3,10 +3,7 @@
 
 # <a href="https://colab.research.google.com/github/DrMadhushan/e17-fyp-xai/blob/master/Feature_Engineering.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
 
-
 get_ipython().system('pip install mlxtend')
-
-
 import joblib
 import sys
 
