@@ -28,6 +28,8 @@ from sklearn.metrics import confusion_matrix
 from sklearn.metrics import precision_score, recall_score, accuracy_score
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report
+from sklearn.ensemble import RandomForestClassifier
+from sklearn import svm
 
 
 
@@ -133,8 +135,6 @@ def run_pipeline(data, model, parameters, time_period_in_days, fund_ratio_thresh
   time_period = timedelta(days=time_period_in_days)  
   time_posted_window = timedelta(days=120)
   t_current = min_t - time_period + time_posted_window # min-t + three months
-  # One hot encoding
-  data = one_hot_encoding_columns(data, categorical_variables)
 
   # Start cohort
   while(t_current < max_t - time_period):
@@ -163,16 +163,20 @@ def run_pipeline(data, model, parameters, time_period_in_days, fund_ratio_thresh
     data_window["Teacher is Donor Count"] = data_window.groupby("Project ID")["Teacher is Donor Coded"].transform("sum")
     data_window["Teacher is Donor Ratio"] = data_window["Teacher is Donor Count"] / data_window["Number of Donors"]
 
+    data_window["Donation is Optional Coded"] = np.where(data_window["Donation Included Optional Donation"] == "Yes", 1, 0)
+    data_window["Donation is Optional Count"] = data_window.groupby("Project ID")["Donation is Optional Coded"].transform("sum")
+    data_window["Donation is Optional Ratio"] = data_window["Donation is Optional Count"] / data_window["Number of Donors"]
+
     data_window["Donor State Most Frequent"] = data_window.groupby("Project ID")["Donor State"].transform(lambda x: x.value_counts().idxmax())
 
     # Create label
     data_window["Label"] = data_window.apply(lambda x : 1  if x["Fund Ratio"] < fund_ratio_threshold  else 0, axis=1)
 
     # Filter for columns and remove duplicate rows
-    model_vars = ["Project Id", "Total Donations", "Number of Donors", "Fund Ratio", "Project Type", "Project Subject Category Tree", 
+    model_vars = ["Project ID", "Total Donations", "Number of Donors", "Fund Ratio", "Project Type", "Project Subject Category Tree", 
                   "Project Subject Subcategory Tree", "Project Grade Level Category", "Project Resource Category", "Donor State Most Frequent", 
                   "School Metro Type", "School Percentage Free Lunch", "School State", "School County", 
-                  "Teacher Prefix", "Teacher is Donor Ratio"]
+                  "Teacher Prefix", "Teacher is Donor Ratio", "Donation is Optional Ratio"]
     cols_to_select = model_vars + ["Label", "Project Posted Date"]
     data_window_final = data_window[cols_to_select].drop_duplicates()
 
@@ -183,6 +187,7 @@ def run_pipeline(data, model, parameters, time_period_in_days, fund_ratio_thresh
     train_set = data_window_final[data_window_final["Project Posted Date"] < pd.to_datetime(t_end)].drop(["Project ID", "Project Posted Date"], axis=1)
     x_train = train_set.loc[:, train_set.columns != "Label"]
     y_train = train_set.loc[:, ["Label"]]
+    print("Training set columns :", list(train_set.columns.values))
 
     # Create testing set
     test_set = data_window_final[data_window_final["Project Posted Date"] >= pd.to_datetime(t_end)].drop(["Project ID", "Project Posted Date"], axis=1)
@@ -290,14 +295,29 @@ data["Teacher Prefix"] = data["Teacher Prefix"].fillna(data["Teacher Prefix"].mo
 
 ########################################################################################################
 
-# Define model and parameters
-classifier = LogisticRegression()
-parameters = {"C":np.logspace(-3,3,7), "penalty":["l1","l2"]}
+# Define models and parameters
+classifier_1 = LogisticRegression()
+parameters_1 = {"C":np.logspace(-3,3,7), 
+                "penalty":["l1","l2"]}
+
+classifier_2 = RandomForestClassifier()
+parameters_2 = {'max_depth':[2, 3, 4], 
+                'n_estimators':[5, 10, 20], 
+                'min_samples_split': 2, 
+                'min_samples_leaf': 2}
+
+classifier_3 = svm.SVC(kernel='linear')
+
+
+########################################################################################################
+
 # Define column lists
-categorical_variables = ["Project Type", "Project Subject Category Tree", "Project Subject Subcategory Tree", "Project Grade Level Category", "Project Resource Category", "Donor State Most Frequent", 
-                  "Donor City Most Frequent", "School Metro Type", "School State", "School County", 
-                  "Teacher Prefix"]
-variables_to_scale = ["Total Donations", "Number of Donors", "Fund Ratio", "School Percentage Free Lunch", "Teacher is Donor Ratio"]
+categorical_variables = ["Project Type", "Project Subject Category Tree", "Project Subject Subcategory Tree", 
+                         "Project Grade Level Category", "Project Resource Category", "Donor State Most Frequent", 
+                         "Donor City Most Frequent", "School Metro Type", "School State", "School County", 
+                         "Teacher Prefix"]
+variables_to_scale = ["Total Donations", "Number of Donors", "Fund Ratio", "School Percentage Free Lunch", 
+                      "Teacher is Donor Ratio", "Donation is Optional Ratio"]
 # Run and evaluate
-t_current_list, t_current_accuracy, model_post_run = run_pipeline(data, classifier, parameters, 
-30, 0.5, categorical_variables, variables_to_scale)
+t_current_list, t_current_accuracy, model_post_run = run_pipeline(data, classifier_1, parameters_1, 
+30, 0.15, categorical_variables, variables_to_scale)
